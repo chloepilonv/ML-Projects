@@ -11,6 +11,8 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import r2_score
 import xgboost as xgb
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 # Load files. Current datas are private and can't be share on Github. Will correlate to another public data sets.
 data_path = ''
@@ -25,7 +27,44 @@ test.head()
 sample_submission.head()
 var_desc.head()
 
-# ENCODE DATAS
+#FIRST CLEANING 
+#SHow the variance of numerical values
+trainnum =train.select_dtypes(include=np.number) 
+trainnum.var()
+#We could drop Acre, NoFertilizerAppln because <0.1
+train=train.drop(['Acre','NoFertilizerAppln'],axis=1)
+#Drop duplicate rows
+train=train.drop_duplicates()
+
+#FIRST FEATURE SELECTION (NUMERICAL)
+X=train.drop(['ID'],axis=1)
+numerical_X = X.select_dtypes(include=np.number) 
+
+# Calculating the correlation matrix
+corr_matrix_numerical_X = numerical_X.corr()
+
+# Plotting the heatmap with annotations
+plt.figure(figsize=(12, 10))
+sns.heatmap(corr_matrix_numerical_X, annot=True, cmap='coolwarm', fmt=".2f") #with annot=True, each cell will be annotated with the numeric value
+plt.title("Correlation Heatmap (Numerical Variables)")
+plt.show()
+
+#We will keep only features that have a correlation of 0.30 or more with the target variable.
+#Also, we see that Harv_hand_rent is highly correlated with 2tdUrea - which is strongly correlated with Yield -, so we will keep it
+#With this same reasoning, we could do the same with CultLand and CropCultLand in regard to BasalDAP, BasalUrea and 2tdUrea, but we won't for now because they have lower values
+yield_correlations = corr_matrix_numerical_X['Yield']
+# Keeping only highly correlated features over > 0.3 AND Harv_hand_rent
+selected_numfeatures = yield_correlations[abs(yield_correlations) > 0.30].index.tolist()
+
+if 'Harv_hand_rent' not in selected_numfeatures:
+    selected_numfeatures.append('Harv_hand_rent')
+
+# Now selected_columns holds the names of columns with correlation > 0.30 with 'Yield'
+# and includes 'Harv_hand_rent'
+print(selected_numfeatures)
+
+
+#ENCODING CATEGORICAL DATAS
 
 #New data set without column (axis=1) 'ID' (not predictive of the outcome) and 'Yield' (our target variable) from X
 X = train.drop(['ID', 'Yield'], axis = 1) 
