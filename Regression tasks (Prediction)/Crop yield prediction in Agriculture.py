@@ -96,12 +96,63 @@ X = onehotencoder.fit_transform(X)
 y = train.Yield 
 
 
-#FEATURE SELECTION
+#WORK WITH OUTLIERS
 
+#FIND OUTLIERS
+def detect_outliers(df):
+    outlier_list = []
+
+    for col in df.columns:
+        Q1 = df[col].quantile(0.25)
+        Q3 = df[col].quantile(0.75)
+        IQR = Q3 - Q1
+        outlier_indices = df[(df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR))].index
+
+        for index in outlier_indices:
+            outlier_list.append((index, col))
+
+    return outlier_list
+
+outlier_list = detect_outliers(numerical_X)
+
+
+print(f"Total number of outliers: {len(outlier_list)}")
+
+#REPLACE OR ARRANGE OUTLIERS
+outlier_array = np.array(outlier_list)
+# Convert outlier positions to a numerical_XFrame for easier processing
+outliers_df = pd.DataFrame(outlier_array, columns=['row', 'col'])
+
+# 1. Delete lines (rows) with more than 50% outliers
+row_outlier_counts = outliers_df['row'].value_counts()
+rows_to_delete = row_outlier_counts[row_outlier_counts > numerical_X.shape[1] * 0.5].index
+numerical_X.drop(rows_to_delete, inplace=True)
+
+toomuch = 0
+# 2. Handle outliers in columns
+for col in range(numerical_X.shape[1]):
+    col_outliers = outliers_df[outliers_df['col'] == col]
+    outlier_percentage = len(col_outliers) / len(numerical_X)
+
+    if outlier_percentage < 30:  # less than 30% outliers
+        # Replace outliers with the column mean
+        mean_value = numerical_X.iloc[:, col].mean()
+        numerical_X.iloc[col_outliers['row'], col] = mean_value
+    elif outlier_percentage > 30:  # more than 30% outliers
+        # Manual inspection of outliers
+        toomuch = toomuch + 1
+        print(f"Column {col} requires manual inspection. Outliers at rows: {col_outliers['row'].tolist()}")
+
+
+#sets the target variable
+y = train.Yield 
+
+#select the datas to train after all these alterations
+x = numerical_X[selected_numfeatures]
 
 
 #TRAINING
- #splittings the data into training and testing sets
+#splittings the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.25, random_state = 1234)
 
 #MODEL
