@@ -27,12 +27,6 @@ test.head()
 sample_submission.head()
 var_desc.head()
 
-#FIRST CLEANING 
-#SHow the variance of numerical values
-trainnum =train.select_dtypes(include=np.number) 
-trainnum.var()
-#We could drop Acre, NoFertilizerAppln because <0.1
-train=train.drop(['Acre','NoFertilizerAppln'],axis=1)
 #Drop duplicate rows
 train=train.drop_duplicates()
 
